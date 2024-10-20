@@ -37,6 +37,12 @@ module Eneroth
       def draw(view)
         tr = widget_transformation(view)
 
+        # Axes currently don't cater to perspective and their position within
+        # the view.
+        # REVIEW: Consider using 3D model space for placing the widget in front
+        # of the physical camera. Can then rely on View#screen_coords and 2D
+        # drawing to always draw on top of the model.
+
         view.line_width = 1
         3.times do |axis_index|
           set_color_from_axis(view, axis_index)
@@ -64,28 +70,31 @@ module Eneroth
         view.set_color_from_line(ORIGIN, ORIGIN.offset(vector))
       end
 
-      # Get transformation compass internal coordinates to screen space coordinates
-      # TODO: Update all these descriptions
+      # Get transformation from widget's internal coordinates to screen space
+      # coordinates.
       #
       # @param view [Sketchup::View]
       #
       # @return [Geom::Transformation]
       def widget_transformation(view)
-        # TODO: Calculate properly
-        # For now just doing a little 2D top view of model axes, independent of
-        # camera.
         Geom::Transformation.new(widget_center(view)) *
-          Geom::Transformation.axes(ORIGIN, *view.model.axes.axes) *
-          Geom::Transformation.scaling(ORIGIN, 1, -1, 1)
+          # Screen space using negative Y for up
+          Geom::Transformation.scaling(ORIGIN, 1, -1, 1) *
+          Geom::Transformation.axes(ORIGIN, view.camera.xaxis, view.camera.yaxis, view.camera.zaxis).inverse *
+          # REVIEW: Do we actually want the local or global axes when editing
+          # group/component? Consider exposing as user setting.
+          Geom::Transformation.axes(ORIGIN, *view.model.axes.axes)
       end
 
-      # Screen space position of compass center.
+      # Screen space position of widget center.
       #
       # @param view [Sketchup::View]
       #
       # @return [Geom::Poin3d]
       def widget_center(view)
         # Change here to change the position of the axes overlay on screen.
+        # REVIEW: Consider exposing corner, size and margin in UI.
+        # Also applies to Eneroth North Arrow.
         bottom_left_corner = Geom::Point3d.new(*view.corner(2), 0)
 
         bottom_left_corner.offset([RADIUS + MARGIN, -RADIUS - MARGIN, 0])
