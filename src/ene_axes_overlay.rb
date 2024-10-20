@@ -23,7 +23,7 @@ module Eneroth
 
     EXTENSION.creator     = "Eneroth"
     EXTENSION.description =
-      "Axes overlay. Useful to keep yourself or your clients oriented when displaying a model."
+      "Useful to keep yourself or your clients oriented when displaying a model."
     EXTENSION.version     = "1.0.0"
     EXTENSION.copyright   = "2024, #{EXTENSION.creator}"
     Sketchup.register_extension(EXTENSION, true)

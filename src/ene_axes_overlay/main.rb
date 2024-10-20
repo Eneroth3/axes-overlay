@@ -37,31 +37,31 @@ module Eneroth
       def draw(view)
         tr = widget_transformation(view)
 
-        # TODO: Extract method for setting axes colors. Honor drawing axes directions.
-        view.set_color_from_line(ORIGIN, ORIGIN.offset(X_AXIS))
-        view.line_stipple = ""
-        points = [ORIGIN, Geom::Point3d.new(RADIUS, 0, 0)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
+        view.line_width = 1
+        3.times do |axis_index|
+          set_color_from_axis(view, axis_index)
 
-        view.line_stipple = "."
-        points = [ORIGIN, Geom::Point3d.new(-RADIUS, 0, 0)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
+          view.line_stipple = ""
+          points = [ORIGIN, ORIGIN.dup.tap { |pt| pt[axis_index] = RADIUS }]
+          view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
 
-        view.set_color_from_line(ORIGIN, ORIGIN.offset(Y_AXIS))
-        view.line_stipple = ""
-        points = [ORIGIN, Geom::Point3d.new(0, RADIUS, 0)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
-        view.line_stipple = "."
-        points = [ORIGIN, Geom::Point3d.new(0, -RADIUS, 0)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
+          view.line_stipple = "."
+          points = [ORIGIN, ORIGIN.dup.tap { |pt| pt[axis_index] = -RADIUS }]
+          view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
+        end
+      end
 
-        view.set_color_from_line(ORIGIN, ORIGIN.offset(Z_AXIS))
-        view.line_stipple = ""
-        points = [ORIGIN, Geom::Point3d.new(0, 0, RADIUS)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
-        view.line_stipple = "."
-        points = [ORIGIN, Geom::Point3d.new(0, 0, -RADIUS)]
-        view.draw2d(GL_LINES, points.map { |pt| pt.transform(tr) })
+      # Set view drawing color to one of the SketchUp axes colors.
+      #
+      # SketchUp has no native way to read the axis colors from user preferences.
+      # If we don't just want to assume they are R, G and B, we have to wrap
+      # View#set_color_from_line.
+      #
+      # @param view [Sketchup::View]
+      # @param axis_index [Integer] 0, 1 and 2 for X, Y and Z axis respectively.
+      def set_color_from_axis(view, axis_index)
+        vector = view.model.axes.axes[axis_index]
+        view.set_color_from_line(ORIGIN, ORIGIN.offset(vector))
       end
 
       # Get transformation compass internal coordinates to screen space coordinates
@@ -72,8 +72,11 @@ module Eneroth
       # @return [Geom::Transformation]
       def widget_transformation(view)
         # TODO: Calculate properly
-        Geom::Transformation.new(widget_center(view))# *
-          #Geom::Transformation.rotation(ORIGIN, Z_AXIS, compass_angle(view))
+        # For now just doing a little 2D top view of model axes, independent of
+        # camera.
+        Geom::Transformation.new(widget_center(view)) *
+          Geom::Transformation.axes(ORIGIN, *view.model.axes.axes) *
+          Geom::Transformation.scaling(ORIGIN, 1, -1, 1)
       end
 
       # Screen space position of compass center.
